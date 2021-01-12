@@ -11,10 +11,10 @@ using namespace std;
 // node (x, y, parent)
 struct Node
 {
-    int x, y;
-    struct Node* parent;
+    float x, y;
+    int parent;
 
-    Node(int x, int y)
+    Node(float x, float y)
     {
         this->x = x;
         this->y = y;
@@ -33,8 +33,48 @@ public:
     Node* goal;
     vector<Node*> node_list;
     vector<PosPair> path;
+    int obst_num;
 
-    RRT(Node* s, Node* g){ start = s; goal = g; }
+    RRT(Node* s, Node* g, int n){ start = s; goal = g; obst_num = n;}
+
+    static int nearest_node_list(vector<Node*> node_list, PosPair rnd)
+    {
+        int min_idx = -1;
+
+        double min_dist, dist;
+
+        for (int i = 0; i < node_list.size(); ++i) {
+            dist = (node_list[i]->x - rnd.first) * (node_list[i]->x - rnd.first) +
+                   (node_list[i]->y - rnd.second) * (node_list[i]->y - rnd.second);
+            if (i == 0) {min_dist = dist; min_idx = i;}
+            else
+            {
+                if (dist < min_dist)
+                {
+                    min_dist = dist;
+                    min_idx = i;
+                }
+            }
+        }
+
+        return min_idx;
+    }
+
+    static bool check_collision(Node* node, int obstacles[][3], int obst_num)
+    {
+        int ox, oy, os;
+        float dx, dy, d;
+
+        for (int i = 0; i < obst_num; ++i) {
+            dx = ox - node->x;
+            dy = oy - node->y;
+            d = sqrt(dx * dx + dy * dy);
+
+            if (d <= os) {return false;} // collision
+        }
+
+        return true; // safe
+    }
 
     void planning(int obstacles[][3])
     {
@@ -49,6 +89,13 @@ public:
         // sampled node
         PosPair rnd;
 
+        // nearest node's data
+        int nrst_idx;
+        Node* nrst_node;
+
+        // direction angle to new node
+        float angle;
+
         while (true)
         {
             // random sampling
@@ -61,9 +108,26 @@ public:
                 rnd = make_pair(goal->x, goal->y);
             }
 
-            cout << rnd.first << ' ' << rnd.second << endl;
-
             // find nearest node
+            nrst_idx = nearest_node_list(node_list, rnd);
+
+            // expand tree
+            nrst_node = node_list[nrst_idx];
+            // direction
+            angle = atan2(rnd.second - nrst_node->y, rnd.first - nrst_node->x);
+
+            // caluculate new node
+            Node* new_node = nrst_node;
+            new_node->x += EXPAND_DISTANCE * cos(angle);
+            new_node->y += EXPAND_DISTANCE * sin(angle);
+            new_node->parent = nrst_idx;
+
+            if (!check_collision(new_node, obstacles, obst_num)) {continue;}
+
+            node_list.push_back(new_node);
+
+            // check goal
+
         }
     }
 };
@@ -80,13 +144,15 @@ int main() {
             {9, 5, 2}
     };
 
+    int size = sizeof(obstacles) / sizeof(*obstacles);
+
     // start position
     Node* start = new Node(0, 0);
 
     // goal position
     Node* goal = new Node(6, 7);
 
-    RRT rrt = RRT(start, goal);
+    RRT rrt = RRT(start, goal, size);
 
     rrt.planning(obstacles);
 
