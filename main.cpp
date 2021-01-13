@@ -96,6 +96,11 @@ public:
         // direction angle to new node
         float angle;
 
+        // check goal
+        float dx, dy, d;
+        int last_idx;
+        Node* last_node;
+
         while (true)
         {
             // random sampling
@@ -127,8 +132,17 @@ public:
             node_list.push_back(new_node);
 
             // check goal
-
+            dx = new_node->x - goal->x;
+            dy = new_node->y - goal->y;
+            d = sqrt(dx * dx + dy * dy);
+            if (d <= EXPAND_DISTANCE)
+            {
+                cout << "Goal!!" << endl;
+                break;
+            }
         }
+
+        // print path
     }
 };
 
