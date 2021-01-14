@@ -14,11 +14,11 @@ struct Node
     float x, y;
     int parent;
 
-    Node(float x, float y)
+    Node(float x, float y, int idx)
     {
         this->x = x;
         this->y = y;
-        this->parent = NULL;
+        this->parent = idx;
     }
 };
 
@@ -62,15 +62,14 @@ public:
 
     static bool check_collision(Node* node, int obstacles[][3], int obst_num)
     {
-        int ox, oy, os;
         float dx, dy, d;
 
         for (int i = 0; i < obst_num; ++i) {
-            dx = ox - node->x;
-            dy = oy - node->y;
+            dx = obstacles[i][0] - node->x;
+            dy = obstacles[i][1] - node->y;
             d = sqrt(dx * dx + dy * dy);
 
-            if (d <= os) {return false;} // collision
+            if (d <= obstacles[i][2]) {return false;} // collision
         }
 
         return true; // safe
@@ -122,10 +121,11 @@ public:
             angle = atan2(rnd.second - nrst_node->y, rnd.first - nrst_node->x);
 
             // caluculate new node
-            Node* new_node = nrst_node;
+//            new_node = nrst_node;
+            Node* new_node = new Node(nrst_node->x, nrst_node->y, nrst_idx);
             new_node->x += EXPAND_DISTANCE * cos(angle);
             new_node->y += EXPAND_DISTANCE * sin(angle);
-            new_node->parent = nrst_idx;
+//            new_node->parent = nrst_idx;
 
             if (!check_collision(new_node, obstacles, obst_num)) {continue;}
 
@@ -142,7 +142,29 @@ public:
             }
         }
 
-        // print path
+        // path
+        path.push_back(make_pair(goal->x, goal->y));
+        last_idx = node_list.size() - 1;
+        while (node_list[last_idx]->parent != -1)
+        {
+            last_node = node_list[last_idx];
+            path.push_back(make_pair(last_node->x, last_node->y));
+            last_idx = last_node->parent;
+        }
+        path.push_back(make_pair(start->x, start->y));
+
+        // print
+        reverse(path.begin(), path.end());
+        for (int i = 0; i < path.size() ; ++i) {
+            if (i == path.size() - 1)
+            {
+                cout << "(" << path[i].first << " " << path[i].second << ")" << endl;
+            }
+            else
+            {
+                cout << "(" << path[i].first << " " << path[i].second << ")" << "->";
+            }
+        }
     }
 };
 
@@ -161,10 +183,10 @@ int main() {
     int size = sizeof(obstacles) / sizeof(*obstacles);
 
     // start position
-    Node* start = new Node(0, 0);
+    Node* start = new Node(0, 0, -1);
 
     // goal position
-    Node* goal = new Node(6, 7);
+    Node* goal = new Node(6, 7, -1);
 
     RRT rrt = RRT(start, goal, size);
 
